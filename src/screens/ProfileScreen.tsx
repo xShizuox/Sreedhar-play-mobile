@@ -882,6 +882,7 @@ const PlaylistDetailModal = ({ playlist, onClose, onRemoveTrack, isOwnProfile }:
 };
 
 const EditProfileModal = ({ onClose, initialData, onUpdate }: any) => {
+  const { crossfadeDuration, setCrossfadeDuration } = usePlayer();
   const [username, setUsername] = useState(initialData.username);
   const [bio, setBio] = useState(initialData.bio);
   const [imagePreview, setImagePreview] = useState(initialData.image_file);
