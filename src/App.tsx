@@ -155,7 +155,7 @@ export default function App() {
                   </motion.div>
                 )}
                 {/* Other views would be added here */}
-                {currentView !== 'home' && currentView !== 'profile' && currentView !== 'search' && currentView !== 'library' && currentView !== 'jam' && (
+                {currentView !== 'home' && currentView !== 'profile' && currentView !== 'search' && currentView !== 'library' && currentView !== 'jam' && currentView !== 'settings' && (
                   <motion.div
                     key="placeholder"
                     initial={{ opacity: 0, scale: 0.95 }}
