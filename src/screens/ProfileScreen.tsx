@@ -818,7 +818,12 @@ const PlaylistDetailModal = ({ playlist, onClose, onRemoveTrack, isOwnProfile }:
             </div>
             
             <div className="flex items-center justify-center sm:justify-start gap-3">
-              <TouchableScale onClick={() => playlist.tracks?.[0] && playTrack(playlist.tracks[0])}>
+              <TouchableScale onClick={() => {
+                if (playlist.tracks && playlist.tracks.length > 0) {
+                  const randomIndex = Math.floor(Math.random() * playlist.tracks.length);
+                  playTrack(playlist.tracks[randomIndex]);
+                }
+              }}>
                 <button className="px-6 sm:px-8 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl active-pill font-bold shadow-xl shadow-purple-900/20 text-white flex items-center gap-2 text-sm sm:text-base">
                   <Play size={16} className="sm:w-[18px] sm:h-[18px]" fill="white" />
                   Play
