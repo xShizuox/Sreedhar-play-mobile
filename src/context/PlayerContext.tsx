@@ -81,6 +81,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   setQueueRef.current = setQueue;
 
   const safePlay = () => {
+    if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+      audioContextRef.current.resume();
+    }
     const audio = activePlayer === 'A' ? audioRefA.current : audioRefB.current;
     if (audio) {
       const promise = audio.play();
