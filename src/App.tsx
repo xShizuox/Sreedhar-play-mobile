@@ -17,6 +17,7 @@ import { View } from './types';
 import { motion, AnimatePresence } from 'motion/react';
 
 import { AuthScreen } from './screens/AuthScreen';
+import { App as CapApp } from '@capacitor/app';
 
 export default function App() {
   const [showSplash, setShowSplash] = useState(true);
@@ -44,6 +45,21 @@ export default function App() {
     window.addEventListener('navigateProfile', handleNav as EventListener);
     return () => window.removeEventListener('navigateProfile', handleNav as EventListener);
   }, []);
+
+  useEffect(() => {
+    const handler = CapApp.addListener('backButton', () => {
+      if (isPlayerOpen) {
+        setIsPlayerOpen(false);
+      } else if (currentView !== 'home') {
+        setCurrentView('home');
+      } else {
+        CapApp.exitApp();
+      }
+    });
+    return () => {
+      handler.then(h => h.remove());
+    };
+  }, [isPlayerOpen, currentView]);
 
   return (
     <JamProvider>
