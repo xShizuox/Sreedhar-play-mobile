@@ -291,6 +291,18 @@ export const ProfileScreen: React.FC<{ userId?: string | null; onSettingsClick?:
 
   return (
     <div className="pb-[240px] pt-16 px-6 max-w-4xl mx-auto w-full">
+      {/* Top Header Controls */}
+      <div className="flex justify-between items-center mb-6">
+        <div />
+        {isOwnProfile && (
+          <TouchableScale onClick={onSettingsClick}>
+            <button className="w-11 h-11 rounded-full glass border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all hover:scale-105 active:scale-95 text-white">
+              <Settings size={18} />
+            </button>
+          </TouchableScale>
+        )}
+      </div>
+
       {/* Profile Header */}
       <div className="flex flex-col items-center mb-12">
         <div className="relative mb-6">
@@ -304,7 +316,7 @@ export const ProfileScreen: React.FC<{ userId?: string | null; onSettingsClick?:
             </div>
           </motion.div>
           <TouchableScale 
-            onClick={() => onSettingsClick ? onSettingsClick() : setIsEditModalOpen(true)}
+            onClick={() => setIsEditModalOpen(true)}
             className="absolute bottom-0 right-0 w-10 h-10 rounded-full glass flex items-center justify-center border-2 border-white/20 shadow-lg"
           >
             <Settings size={18} />
