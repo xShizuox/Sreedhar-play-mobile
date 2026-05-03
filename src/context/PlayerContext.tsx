@@ -21,6 +21,8 @@ export interface PlayerContextType {
   reorderQueue: (startIndex: number, endIndex: number) => void;
   setQueue: (queue: Track[]) => void;
   setIsPlaying: (isPlaying: boolean) => void;
+  crossfadeDuration: number;
+  setCrossfadeDuration: (duration: number) => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -42,6 +44,12 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [duration, setDuration] = useState(0);
   const [isShuffle, setIsShuffle] = useState(false);
   const [queue, setQueue] = useState<Track[]>(MOCK_TRACKS.slice(1));
+  const [crossfadeDuration, setCrossfadeDuration] = useState<number>(() => {
+    const saved = localStorage.getItem('crossfadeDuration');
+    return saved ? parseInt(saved, 10) : 5;
+  });
+
+  const crossfadeTriggeredRef = useRef(false);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playPromiseRef = useRef<Promise<void> | undefined>(undefined);
@@ -80,14 +88,73 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const togglePlayRef = useRef<() => void>(() => {});
   const seekRef = useRef<(time: number) => void>(() => {});
 
+  const crossfadeDurationRef = useRef(crossfadeDuration);
+  crossfadeDurationRef.current = crossfadeDuration;
+
+  const queueRef = useRef(queue);
+  queueRef.current = queue;
+
+  const setCurrentTrackRef = useRef(setCurrentTrack);
+  setCurrentTrackRef.current = setCurrentTrack;
+
+  const setQueueRef = useRef(setQueue);
+  setQueueRef.current = setQueue;
+
   useEffect(() => {
     audioRef.current = new Audio();
-    
     const audio = audioRef.current;
-    
+    if (!audio) return;
+
     const updateProgress = () => {
       setProgress(audio.currentTime);
       setDuration(audio.duration || 0);
+
+      // Crossfade logic
+      if (
+        crossfadeDurationRef.current > 0 &&
+        !crossfadeTriggeredRef.current &&
+        audio.duration > 0 &&
+        audio.currentTime >= audio.duration - crossfadeDurationRef.current
+      ) {
+        crossfadeTriggeredRef.current = true;
+        if (queueRef.current.length > 0) {
+          const nextTrack = queueRef.current[0];
+          
+          const nextAudio = new Audio(nextTrack.audioUrl);
+          nextAudio.volume = 0;
+          
+          const p = nextAudio.play();
+          if (p !== undefined) p.catch(() => {});
+
+          const intervalTime = 100;
+          const steps = (crossfadeDurationRef.current * 1000) / intervalTime;
+          let step = 0;
+
+          const fadeInterval = setInterval(() => {
+            step++;
+            const currentVol = Math.max(0, 1 - (step / steps));
+            const nextVol = Math.min(1, (step / steps));
+
+            if (audio) audio.volume = currentVol;
+            nextAudio.volume = nextVol;
+
+            if (step >= steps) {
+              clearInterval(fadeInterval);
+              
+              audio.src = nextTrack.audioUrl;
+              audio.volume = 1;
+              audio.currentTime = crossfadeDurationRef.current;
+              
+              const resumePlay = audio.play();
+              if (resumePlay !== undefined) resumePlay.catch(() => {});
+
+              setCurrentTrackRef.current(nextTrack);
+              setQueueRef.current(prevQueue => prevQueue.slice(1));
+              crossfadeTriggeredRef.current = false;
+            }
+          }, intervalTime);
+        }
+      }
 
       if ('mediaSession' in navigator && navigator.mediaSession.setPositionState) {
         try {
@@ -328,7 +395,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       removeFromQueue,
       reorderQueue,
       setQueue,
-      setIsPlaying
+      setIsPlaying,
+      crossfadeDuration,
+      setCrossfadeDuration
     }}>
       {children}
     </PlayerContext.Provider>

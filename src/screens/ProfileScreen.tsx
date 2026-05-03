@@ -9,7 +9,7 @@ import { Track } from '../types';
 import { DEFAULT_AVATARS } from '../constants';
 
 export const ProfileScreen: React.FC<{ userId?: string | null }> = ({ userId }) => {
-  const { playTrack, currentTrack, toggleLike } = usePlayer();
+  const { playTrack, currentTrack, toggleLike, crossfadeDuration, setCrossfadeDuration } = usePlayer();
   const { downloadedTracks, getOfflineTracks } = useDownload();
   const [activeTab, setActiveTab] = useState<'uploads' | 'playlists' | 'likes' | 'offline'>('uploads');
   const [profileData, setProfileData] = useState<any>(null);
@@ -1028,6 +1028,36 @@ const EditProfileModal = ({ onClose, initialData, onUpdate }: any) => {
                 className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-purple-500/50 transition-all font-medium resize-none"
                 placeholder="Tell your story..."
               />
+            </div>
+
+            {/* Crossfade Settings */}
+            <div className="space-y-2 border-t border-white/5 pt-4 mt-2">
+              <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] ml-4">
+                Track Crossfade Duration ({crossfadeDuration}s)
+              </label>
+              <div className="px-4">
+                <input 
+                  type="range" 
+                  min={0} 
+                  max={12} 
+                  step={1}
+                  value={crossfadeDuration}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    setCrossfadeDuration(val);
+                    localStorage.setItem('crossfadeDuration', val.toString());
+                  }}
+                  className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                />
+                <div className="flex justify-between text-[10px] font-mono text-white/20 mt-1">
+                  <span>OFF</span>
+                  <span>1s</span>
+                  <span>3s</span>
+                  <span>6s</span>
+                  <span>9s</span>
+                  <span>12s</span>
+                </div>
+              </div>
             </div>
 
             <TouchableScale className="w-full pt-4">
