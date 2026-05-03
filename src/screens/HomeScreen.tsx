@@ -14,6 +14,21 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchClick }) => {
   const { playTrack, currentTrack, isPlaying, toggleLike } = usePlayer();
   const { downloadedTracks } = useDownload();
   const [activeTab, setActiveTab] = React.useState('Global');
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   const [tracks, setTracks] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -121,6 +136,26 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchClick }) => {
         >
           <Search size={22} />
         </TouchableScale>
+      </motion.div>
+
+      {/* Offline/Online Banner */}
+      <motion.div 
+        variants={itemVariants}
+        className={`mb-10 p-4 rounded-3xl border flex items-center justify-between backdrop-blur-md transition-all ${
+          isOnline 
+          ? 'bg-green-500/10 border-green-500/20 text-green-400' 
+          : 'bg-red-500/10 border-red-500/20 text-red-400'
+        }`}
+      >
+        <div className="flex items-center gap-3 ml-1">
+          <div className={`w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.7)]' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.7)] animate-pulse'}`}></div>
+          <span className="text-xs font-bold tracking-wider font-mono">
+            {isOnline ? 'Cloud Synchronized' : 'Offline Mode (Local tracks only)'}
+          </span>
+        </div>
+        <span className="text-[10px] font-black uppercase tracking-wider bg-white/5 px-3.5 py-1.5 rounded-full border border-white/5 select-none">
+          {isOnline ? 'Online' : 'Offline'}
+        </span>
       </motion.div>
 
       <motion.div variants={itemVariants} className="mb-14">
