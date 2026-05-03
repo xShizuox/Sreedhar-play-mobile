@@ -664,7 +664,114 @@ async function startServer() {
 
   const jams = new Map();
 
+  interface RoomState {
+    hostSocketId: string;
+    roomCode: string;
+    currentSong: any;
+    isPlaying: boolean;
+    currentTime: number;
+    lastUpdatedAt: number;
+    participants: Set<string>;
+  }
+
+  const rooms = new Map<string, RoomState>();
+
   io.on('connection', (socket) => {
+    // ---- New Jam Room Logic ----
+    socket.on('create-room', () => {
+      const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      rooms.set(roomCode, {
+        hostSocketId: socket.id,
+        roomCode,
+        currentSong: null,
+        isPlaying: false,
+        currentTime: 0,
+        lastUpdatedAt: Date.now(),
+        participants: new Set([socket.id])
+      });
+      socket.join(roomCode);
+      socket.emit('room-created', { roomCode });
+    });
+
+    socket.on('join-room', ({ roomCode }) => {
+      const code = roomCode?.toUpperCase().trim();
+      const room = rooms.get(code);
+      if (!room) {
+        socket.emit('join-error', { message: 'Room not found' });
+        return;
+      }
+      room.participants.add(socket.id);
+      socket.join(code);
+
+      let currentTime = room.currentTime;
+      if (room.isPlaying) {
+        currentTime += (Date.now() - room.lastUpdatedAt) / 1000;
+      }
+
+      socket.emit('room-state', {
+        roomCode: room.roomCode,
+        currentSong: room.currentSong,
+        isPlaying: room.isPlaying,
+        currentTime,
+        participantsCount: room.participants.size
+      });
+
+      socket.to(code).emit('user-joined', { socketId: socket.id });
+    });
+
+    socket.on('playback-update', ({ roomCode, isPlaying, currentTime, song }) => {
+      const code = roomCode?.toUpperCase().trim();
+      const room = rooms.get(code);
+      if (!room) return;
+
+      if (socket.id !== room.hostSocketId) {
+        socket.emit('permission-denied');
+        return;
+      }
+
+      room.isPlaying = isPlaying;
+      room.currentTime = currentTime;
+      room.currentSong = song || null;
+      room.lastUpdatedAt = Date.now();
+
+      socket.to(code).emit('playback-sync', {
+        isPlaying: room.isPlaying,
+        currentTime: room.currentTime,
+        song: room.currentSong
+      });
+    });
+
+    socket.on('leave-room', ({ roomCode }) => {
+      const code = roomCode?.toUpperCase().trim();
+      const room = rooms.get(code);
+      if (!room) return;
+
+      room.participants.delete(socket.id);
+      socket.leave(code);
+
+      if (socket.id === room.hostSocketId) {
+        socket.to(code).emit('room-closed');
+        rooms.delete(code);
+      } else {
+        socket.to(code).emit('user-left', { socketId: socket.id });
+      }
+    });
+
+    socket.on('disconnect', () => {
+      rooms.forEach((room, code) => {
+        if (room.participants.has(socket.id)) {
+          room.participants.delete(socket.id);
+          if (socket.id === room.hostSocketId) {
+            socket.to(code).emit('room-closed');
+            rooms.delete(code);
+          } else {
+            socket.to(code).emit('user-left', { socketId: socket.id });
+          }
+        }
+      });
+    });
+
+    // ---- Legacy Jam Session Logic ----
     socket.on('join-jam', ({ jamId, user }) => {
       const realUserId = user.id || user.userId;
       let jam = jams.get(jamId);
@@ -705,7 +812,6 @@ async function startServer() {
         if (jam.members.length === 0) {
           jams.delete(jamId);
         } else {
-          // Reassign host if host left
           if (jam.hostId === userId && jam.members.length > 0) {
             jam.hostId = jam.members[0].userId;
             jam.members[0].isHost = true;
@@ -718,10 +824,8 @@ async function startServer() {
     socket.on('add-to-queue', ({ jamId, track }) => {
       const jam = jams.get(jamId);
       if (jam) {
-        // Prevent duplicates in queue slightly
         if (!jam.queue.find((t: any) => t.id === track.id)) {
           jam.queue.push(track);
-          // If nothing is playing, start playing first track
           if (!jam.currentTrack) {
             jam.currentTrack = jam.queue.shift();
             jam.isPlaying = true;
