@@ -185,38 +185,50 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchClick }) => {
           <span onClick={onSearchClick} className="text-xs font-bold text-purple-400 cursor-pointer hover:text-purple-300 transition-colors">SEE ALL</span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {tracks.slice(0, 3).map((track) => (
-            <motion.div key={track.id} variants={itemVariants}>
-              <TouchableScale onClick={() => playTrack(track)} className="w-full text-left" scale={0.97}>
-                <div className="glass p-4 rounded-[28px] flex flex-col gap-4 shadow-2xl border border-white/10 hover:border-purple-500/40 hover:bg-white/[0.05] transition-all group h-full relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-b from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                  <div className="relative z-10">
-                    <div className="w-full aspect-square rounded-[20px] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.5)]">
-                      <img src={track.cover} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={track.title} />
-                      {currentTrack?.id === track.id && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                           <div className="flex gap-1.5 items-end h-8">
-                             <motion.div animate={{ height: isPlaying ? [16, 32, 20, 32] : 16 }} transition={{ repeat: isPlaying ? Infinity : 0, duration: 0.5 }} className="w-1.5 bg-purple-400 rounded-full shadow-[0_0_10px_#c084fc]" />
-                             <motion.div animate={{ height: isPlaying ? [24, 12, 24, 16] : 24 }} transition={{ repeat: isPlaying ? Infinity : 0, duration: 0.6 }} className="w-1.5 bg-purple-400 rounded-full shadow-[0_0_10px_#c084fc]" />
-                             <motion.div animate={{ height: isPlaying ? [12, 24, 32, 12] : 12 }} transition={{ repeat: isPlaying ? Infinity : 0, duration: 0.7 }} className="w-1.5 bg-purple-400 rounded-full shadow-[0_0_10px_#c084fc]" />
-                           </div>
-                        </div>
-                      )}
-                    </div>
-                    {/* Now pill */}
-                    <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-white flex items-center gap-1.5 border border-white/10">
-                      <div className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
-                      Hot
-                    </div>
-                  </div>
-                  <div className="relative z-10 px-2 pb-2">
-                    <h3 className={`text-xl md:text-2xl font-black truncate tracking-tight mb-1 ${currentTrack?.id === track.id ? 'text-purple-400' : 'text-white'}`}>{track.title}</h3>
-                    <p className="text-white/40 text-sm font-medium">{track.artist}</p>
-                  </div>
+          {isLoading ? (
+            [1, 2, 3].map((i) => (
+              <div key={i} className="glass p-4 rounded-[28px] flex flex-col gap-4 border border-white/10 animate-pulse h-full">
+                <div className="w-full aspect-square rounded-[20px] bg-white/5" />
+                <div className="px-2 pb-2 space-y-2">
+                  <div className="w-3/4 h-6 bg-white/10 rounded-full" />
+                  <div className="w-1/2 h-4 bg-white/5 rounded-full" />
                 </div>
-              </TouchableScale>
-            </motion.div>
-          ))}
+              </div>
+            ))
+          ) : (
+            tracks.slice(0, 3).map((track) => (
+              <motion.div key={track.id} variants={itemVariants}>
+                <TouchableScale onClick={() => playTrack(track)} className="w-full text-left" scale={0.97}>
+                  <div className="glass p-4 rounded-[28px] flex flex-col gap-4 shadow-2xl border border-white/10 hover:border-purple-500/40 hover:bg-white/[0.05] transition-all group h-full relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-b from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="relative z-10">
+                      <div className="w-full aspect-square rounded-[20px] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.5)]">
+                        <img src={track.cover} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={track.title} />
+                        {currentTrack?.id === track.id && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                             <div className="flex gap-1.5 items-end h-8">
+                               <motion.div animate={{ height: isPlaying ? [16, 32, 20, 32] : 16 }} transition={{ repeat: isPlaying ? Infinity : 0, duration: 0.5 }} className="w-1.5 bg-purple-400 rounded-full shadow-[0_0_10px_#c084fc]" />
+                               <motion.div animate={{ height: isPlaying ? [24, 12, 24, 16] : 24 }} transition={{ repeat: isPlaying ? Infinity : 0, duration: 0.6 }} className="w-1.5 bg-purple-400 rounded-full shadow-[0_0_10px_#c084fc]" />
+                               <motion.div animate={{ height: isPlaying ? [12, 24, 32, 12] : 12 }} transition={{ repeat: isPlaying ? Infinity : 0, duration: 0.7 }} className="w-1.5 bg-purple-400 rounded-full shadow-[0_0_10px_#c084fc]" />
+                             </div>
+                          </div>
+                        )}
+                      </div>
+                      {/* Now pill */}
+                      <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-white flex items-center gap-1.5 border border-white/10">
+                        <div className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+                        Hot
+                      </div>
+                    </div>
+                    <div className="relative z-10 px-2 pb-2">
+                      <h3 className={`text-xl md:text-2xl font-black truncate tracking-tight mb-1 ${currentTrack?.id === track.id ? 'text-purple-400' : 'text-white'}`}>{track.title}</h3>
+                      <p className="text-white/40 text-sm font-medium">{track.artist}</p>
+                    </div>
+                  </div>
+                </TouchableScale>
+              </motion.div>
+            ))
+          )}
         </div>
       </motion.section>
 
@@ -227,12 +239,24 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchClick }) => {
           <span className="text-xs font-bold text-white/30 tracking-widest">TOP LIST</span>
         </div>
         <div className="flex flex-col gap-2">
-          {filteredTracks.map((track, index) => {
-            const isCurrent = currentTrack?.id === track.id;
-            return (
-              <motion.div key={track.id} variants={itemVariants}>
-                <TouchableScale onClick={() => playTrack(track)} className="w-full text-left" scale={0.98}>
-                  <div className={`flex items-center gap-4 p-3 rounded-[20px] transition-all group relative overflow-hidden ${isCurrent ? 'bg-white/10 shadow-[0_0_30px_-5px_rgba(168,85,247,0.15)] border border-white/10' : 'hover:bg-white/[0.04] border border-transparent'}`}>
+          {isLoading ? (
+            [1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="flex items-center gap-4 p-3 rounded-[20px] border border-transparent bg-white/[0.02] animate-pulse">
+                <div className="w-6 h-4 bg-white/5 rounded shrink-0" />
+                <div className="w-12 h-12 md:w-14 md:h-14 bg-white/5 rounded-[14px] shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="w-2/3 h-5 bg-white/10 rounded-full" />
+                  <div className="w-1/3 h-4 bg-white/5 rounded-full" />
+                </div>
+              </div>
+            ))
+          ) : (
+            filteredTracks.map((track, index) => {
+              const isCurrent = currentTrack?.id === track.id;
+              return (
+                <motion.div key={track.id} variants={itemVariants}>
+                  <TouchableScale onClick={() => playTrack(track)} className="w-full text-left" scale={0.98}>
+                    <div className={`flex items-center gap-4 p-3 rounded-[20px] transition-all group relative overflow-hidden ${isCurrent ? 'bg-white/10 shadow-[0_0_30px_-5px_rgba(168,85,247,0.15)] border border-white/10' : 'hover:bg-white/[0.04] border border-transparent'}`}>
                     
                     {/* Index Number */}
                     <div className="w-6 shrink-0 flex justify-center">
@@ -303,7 +327,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchClick }) => {
                 </TouchableScale>
               </motion.div>
             );
-          })}
+          }))}
         </div>
         
         {isLoadingMore && (
