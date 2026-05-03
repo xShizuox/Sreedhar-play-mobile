@@ -15,6 +15,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchClick }) => {
   const { downloadedTracks } = useDownload();
   const [activeTab, setActiveTab] = React.useState('Global');
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [lastTrack, setLastTrack] = useState<any | null>(() => {
+    const saved = localStorage.getItem('lastTrack');
+    if (saved) {
+      try { return JSON.parse(saved); } catch { return null; }
+    }
+    return null;
+  });
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -157,6 +164,34 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSearchClick }) => {
           {isOnline ? 'Online' : 'Offline'}
         </span>
       </motion.div>
+
+      {/* Continue Where You Left Off */}
+      {lastTrack && (
+        <motion.div variants={itemVariants} className="mb-12">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xs font-black tracking-widest text-white/50 uppercase">Continue Listening</h2>
+            <span onClick={() => setLastTrack(null)} className="text-[10px] font-black text-white/30 cursor-pointer hover:text-white transition-colors">DISMISS</span>
+          </div>
+          <TouchableScale onClick={() => playTrack(lastTrack)} className="w-full text-left" scale={0.98}>
+            <div className="glass p-4 rounded-[24px] border border-white/10 flex items-center justify-between hover:bg-white/[0.05] transition-all group overflow-hidden relative shadow-2xl">
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-transparent pointer-events-none" />
+              <div className="flex items-center gap-4 relative z-10">
+                <div className="relative w-14 h-14 rounded-[16px] overflow-hidden shadow-lg border border-white/10 shrink-0">
+                  <img src={lastTrack.cover} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={lastTrack.title} />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] font-extrabold bg-purple-500/20 text-purple-300 border border-purple-500/30 px-2 py-0.5 rounded-md uppercase tracking-wider mb-1 inline-block">Jump Back In</span>
+                  <h3 className="text-lg font-black text-white truncate tracking-tight mb-0.5">{lastTrack.title}</h3>
+                  <p className="text-xs font-medium text-white/40 truncate">{lastTrack.artist}</p>
+                </div>
+              </div>
+              <div className="w-11 h-11 rounded-full bg-white text-black flex items-center justify-center shadow-lg transform group-hover:scale-105 transition-all shrink-0">
+                <Play size={18} className="ml-1" fill="currentColor" />
+              </div>
+            </div>
+          </TouchableScale>
+        </motion.div>
+      )}
 
       <motion.div variants={itemVariants} className="mb-14">
         <h1 className="text-6xl md:text-7xl font-black mb-1 tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-white via-white to-white/30">

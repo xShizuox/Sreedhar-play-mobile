@@ -11,6 +11,17 @@ export const SearchScreen: React.FC = () => {
   const { playTrack, currentTrack, toggleLike } = usePlayer();
   const { downloadedTracks } = useDownload();
   const [tracks, setTracks] = useState<any[]>([]);
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
+    const saved = localStorage.getItem('recentSearches');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const addSearch = (q: string) => {
+    if (!q.trim()) return;
+    const filtered = [q.trim(), ...recentSearches.filter(s => s !== q.trim())].slice(0, 5);
+    setRecentSearches(filtered);
+    localStorage.setItem('recentSearches', JSON.stringify(filtered));
+  };
 
   useEffect(() => {
     const fetchTracks = async () => {
@@ -78,6 +89,11 @@ export const SearchScreen: React.FC = () => {
             placeholder="Search for tracks or artists"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                addSearch(searchQuery);
+              }
+            }}
             className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-4 pl-14 pr-12 text-white placeholder:text-white/20 focus:outline-none focus:border-purple-500/50 transition-all font-medium"
             autoFocus
           />
@@ -94,13 +110,53 @@ export const SearchScreen: React.FC = () => {
 
       <div className="flex flex-col gap-3">
         {searchQuery.trim() === '' ? (
-          <div className="py-20 text-center">
-            <div className="w-20 h-20 rounded-full glass flex items-center justify-center mx-auto mb-6 text-white/10">
-              <Search size={32} />
+          <div className="flex flex-col gap-8">
+            {recentSearches.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em]">Recent Searches</span>
+                  <button onClick={() => { setRecentSearches([]); localStorage.setItem('recentSearches', '[]'); }} className="text-[10px] text-white/30 hover:text-white uppercase font-black">Clear</button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {recentSearches.map((term, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setSearchQuery(term)}
+                      className="px-4 py-2 bg-white/[0.03] border border-white/10 rounded-full text-xs text-white/60 hover:text-white hover:bg-white/[0.06] transition-colors font-medium flex items-center gap-2"
+                    >
+                      <Search size={12} className="opacity-50" />
+                      {term}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Recently Played */}
+            <div>
+              <p className="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em] mb-4">Recently Listened</p>
+              <div className="flex flex-col gap-2">
+                {(tracks.length > 0 ? tracks : MOCK_TRACKS).slice(0, 3).map((track) => {
+                  const isCurrent = currentTrack?.id === track.id;
+                  return (
+                    <TouchableScale key={track.id} onClick={() => playTrack(track)} className="w-full text-left" scale={0.98}>
+                      <div className={`flex items-center gap-4 p-3 rounded-[20px] transition-all border ${isCurrent ? 'bg-white/10 shadow-[0_0_30px_-5px_rgba(168,85,247,0.15)] border-white/10' : 'hover:bg-white/[0.04] border-transparent'}`}>
+                        <div className="relative w-12 h-12 shrink-0">
+                          <img src={track.cover} className="w-full h-full object-cover rounded-[14px] shadow-lg border border-white/10" alt={track.title} />
+                        </div>
+                        <div className="flex-1 min-w-0 pr-4">
+                          <h4 className={`font-bold truncate ${isCurrent ? 'text-purple-400' : 'text-white'}`}>{track.title}</h4>
+                          <p className="text-xs text-white/40 font-medium">{track.artist}</p>
+                        </div>
+                        <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                          <Play size={16} className="ml-0.5" fill="currentColor" />
+                        </div>
+                      </div>
+                    </TouchableScale>
+                  );
+                })}
+              </div>
             </div>
-            <p className="text-white/30 font-medium max-w-[200px] mx-auto leading-relaxed">
-              Find your favorite music across Sreedhar Play
-            </p>
           </div>
         ) : filteredTracks.length > 0 ? (
           <motion.div 

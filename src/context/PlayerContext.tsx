@@ -26,7 +26,17 @@ export interface PlayerContextType {
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 
 export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentTrack, setCurrentTrack] = useState<Track | null>(MOCK_TRACKS[0]);
+  const [currentTrack, setCurrentTrack] = useState<Track | null>(() => {
+    const saved = localStorage.getItem('lastTrack');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return MOCK_TRACKS[0];
+      }
+    }
+    return MOCK_TRACKS[0];
+  });
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -161,7 +171,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         });
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (currentTrack) {
+      localStorage.setItem('lastTrack', JSON.stringify(currentTrack));
+    }
   }, [currentTrack?.audioUrl]);
 
 
