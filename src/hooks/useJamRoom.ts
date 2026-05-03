@@ -15,7 +15,7 @@ export function useJamRoom() {
   const isSyncingRef = useRef<boolean>(false);
 
   useEffect(() => {
-    socketRef.current = io(window.location.origin);
+    socketRef.current = io('https://sreedhar-play.onrender.com');
 
     socketRef.current.on('connect', () => {
       setConnectionStatus('connected');
