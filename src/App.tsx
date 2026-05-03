@@ -20,8 +20,23 @@ import { motion, AnimatePresence } from 'motion/react';
 
 import { AuthScreen } from './screens/AuthScreen';
 import { App as CapApp } from '@capacitor/app';
+import { LocalNotifications } from '@capacitor/local-notifications';
 
 export default function App() {
+  useEffect(() => {
+    const requestNotifPermission = async () => {
+      try {
+        const perm = await LocalNotifications.checkPermissions();
+        if (perm.display !== 'granted') {
+          await LocalNotifications.requestPermissions();
+        }
+      } catch (err) {
+        console.error('Error requesting notification permission', err);
+      }
+    };
+    requestNotifPermission();
+  }, []);
+
   const [showSplash, setShowSplash] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     const token = localStorage.getItem('token');
