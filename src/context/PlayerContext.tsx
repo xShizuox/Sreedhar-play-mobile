@@ -50,40 +50,20 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   });
 
   const crossfadeTriggeredRef = useRef(false);
+  const gaplessBufferedRef = useRef(false);
+
+  const audioRefA = useRef<HTMLAudioElement | null>(null);
+  const audioRefB = useRef<HTMLAudioElement | null>(null);
+  const [activePlayer, setActivePlayer] = useState<'A' | 'B'>('A');
+
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const gainNodeARef = useRef<GainNode | null>(null);
+  const gainNodeBRef = useRef<GainNode | null>(null);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playPromiseRef = useRef<Promise<void> | undefined>(undefined);
 
-  const safePlay = () => {
-    if (audioRef.current) {
-      const promise = audioRef.current.play();
-      playPromiseRef.current = promise;
-      if (promise !== undefined) {
-        promise.catch((error) => {
-          if (error.name !== 'NotAllowedError' && error.name !== 'AbortError') {
-            console.error("Audio play error:", error);
-          }
-        });
-      }
-    }
-  };
-
-  const safePause = () => {
-    if (audioRef.current) {
-      if (playPromiseRef.current !== undefined) {
-        playPromiseRef.current.then(() => {
-          audioRef.current?.pause();
-        }).catch(() => {
-          // Ignored
-        });
-      } else {
-        audioRef.current.pause();
-      }
-    }
-  };
-
   const nextTrackRef = useRef<() => void>(() => {});
-
   const prevTrackRef = useRef<() => void>(() => {});
   const togglePlayRef = useRef<() => void>(() => {});
   const seekRef = useRef<(time: number) => void>(() => {});
@@ -100,59 +80,145 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const setQueueRef = useRef(setQueue);
   setQueueRef.current = setQueue;
 
+  const safePlay = () => {
+    const audio = activePlayer === 'A' ? audioRefA.current : audioRefB.current;
+    if (audio) {
+      const promise = audio.play();
+      playPromiseRef.current = promise;
+      if (promise !== undefined) {
+        promise.catch((error) => {
+          if (error.name !== 'NotAllowedError' && error.name !== 'AbortError') {
+            console.error("Audio play error:", error);
+          }
+        });
+      }
+    }
+  };
+
+  const safePause = () => {
+    const audio = activePlayer === 'A' ? audioRefA.current : audioRefB.current;
+    if (audio) {
+      audio.pause();
+    }
+  };
+
   useEffect(() => {
-    audioRef.current = new Audio();
-    const audio = audioRef.current;
-    if (!audio) return;
+    if (!audioRefA.current) {
+      audioRefA.current = new Audio();
+      audioRefA.current.crossOrigin = 'anonymous';
+    }
+    if (!audioRefB.current) {
+      audioRefB.current = new Audio();
+      audioRefB.current.crossOrigin = 'anonymous';
+    }
+
+    const initAudioContext = () => {
+      if (!audioContextRef.current && (window.AudioContext || (window as any).webkitAudioContext)) {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        const ctx = new AudioCtx();
+        audioContextRef.current = ctx;
+
+        if (audioRefA.current) {
+          const sourceA = ctx.createMediaElementSource(audioRefA.current);
+          const gainA = ctx.createGain();
+          sourceA.connect(gainA);
+          gainA.connect(ctx.destination);
+          gainNodeARef.current = gainA;
+        }
+
+        if (audioRefB.current) {
+          const sourceB = ctx.createMediaElementSource(audioRefB.current);
+          const gainB = ctx.createGain();
+          sourceB.connect(gainB);
+          gainB.connect(ctx.destination);
+          gainNodeBRef.current = gainB;
+        }
+      }
+    };
+
+    initAudioContext();
 
     const updateProgress = () => {
+      const audio = activePlayer === 'A' ? audioRefA.current : audioRefB.current;
+      if (!audio) return;
       setProgress(audio.currentTime);
       setDuration(audio.duration || 0);
 
-      // Crossfade logic
+      // Crossfade Handling
+      const crossfadeDur = crossfadeDurationRef.current;
+      const queueArr = queueRef.current;
       if (
-        crossfadeDurationRef.current > 0 &&
+        crossfadeDur > 0 &&
         !crossfadeTriggeredRef.current &&
         audio.duration > 0 &&
-        audio.currentTime >= audio.duration - crossfadeDurationRef.current
+        audio.currentTime >= audio.duration - crossfadeDur
       ) {
         crossfadeTriggeredRef.current = true;
-        if (queueRef.current.length > 0) {
-          const nextTrack = queueRef.current[0];
+        if (queueArr.length > 0) {
+          const nextTrack = queueArr[0];
+          const idleAudio = activePlayer === 'A' ? audioRefB.current : audioRefA.current;
           
-          const nextAudio = new Audio(nextTrack.audioUrl);
-          nextAudio.volume = 0;
-          
-          const p = nextAudio.play();
-          if (p !== undefined) p.catch(() => {});
+          if (idleAudio) {
+            initAudioContext();
+            const ctx = audioContextRef.current;
+            const gainActive = activePlayer === 'A' ? gainNodeARef.current : gainNodeBRef.current;
+            const gainIdle = activePlayer === 'A' ? gainNodeBRef.current : gainNodeARef.current;
 
-          const intervalTime = 100;
-          const steps = (crossfadeDurationRef.current * 1000) / intervalTime;
-          let step = 0;
+            idleAudio.src = nextTrack.audioUrl;
+            
+            if (ctx && gainActive && gainIdle) {
+              const now = ctx.currentTime;
+              gainActive.gain.setValueAtTime(gainActive.gain.value, now);
+              gainActive.gain.linearRampToValueAtTime(0, now + crossfadeDur);
 
-          const fadeInterval = setInterval(() => {
-            step++;
-            const currentVol = Math.max(0, 1 - (step / steps));
-            const nextVol = Math.min(1, (step / steps));
+              gainIdle.gain.setValueAtTime(0, now);
+              gainIdle.gain.linearRampToValueAtTime(1, now + crossfadeDur);
+            } else {
+              idleAudio.volume = 0;
+            }
 
-            if (audio) audio.volume = currentVol;
-            nextAudio.volume = nextVol;
+            const p = idleAudio.play();
+            if (p !== undefined) p.catch(() => {});
 
-            if (step >= steps) {
-              clearInterval(fadeInterval);
-              
-              audio.src = nextTrack.audioUrl;
-              audio.volume = 1;
-              audio.currentTime = crossfadeDurationRef.current;
-              
-              const resumePlay = audio.play();
-              if (resumePlay !== undefined) resumePlay.catch(() => {});
+            if (!ctx) {
+              let step = 0;
+              const steps = (crossfadeDur * 1000) / 100;
+              const fadeInterval = setInterval(() => {
+                step++;
+                const volOut = Math.max(0, 1 - (step / steps));
+                const volIn = Math.min(1, (step / steps));
+                if (audio) audio.volume = volOut;
+                if (idleAudio) idleAudio.volume = volIn;
+                if (step >= steps) clearInterval(fadeInterval);
+              }, 100);
+            }
 
+            setTimeout(() => {
+              setActivePlayer(prev => prev === 'A' ? 'B' : 'A');
               setCurrentTrackRef.current(nextTrack);
               setQueueRef.current(prevQueue => prevQueue.slice(1));
               crossfadeTriggeredRef.current = false;
-            }
-          }, intervalTime);
+            }, crossfadeDur * 1000);
+          }
+        }
+      }
+
+      // Pre-load / Pre-fetch for gapless playback
+      const gaplessEnabled = localStorage.getItem('gaplessEnabled') === 'true';
+      if (
+        gaplessEnabled &&
+        !gaplessBufferedRef.current &&
+        audio.duration > 0 &&
+        audio.currentTime >= audio.duration * 0.8
+      ) {
+        gaplessBufferedRef.current = true;
+        if (queueArr.length > 0) {
+          const nextTrack = queueArr[0];
+          const idleAudio = activePlayer === 'A' ? audioRefB.current : audioRefA.current;
+          if (idleAudio) {
+            idleAudio.src = nextTrack.audioUrl;
+            idleAudio.load();
+          }
         }
       }
 
@@ -172,6 +238,21 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     const handleEnded = () => {
+      const gaplessEnabled = localStorage.getItem('gaplessEnabled') === 'true';
+      if (gaplessEnabled && gaplessBufferedRef.current && queueRef.current.length > 0) {
+        const nextTrack = queueRef.current[0];
+        const idleAudio = activePlayer === 'A' ? audioRefB.current : audioRefA.current;
+        if (idleAudio) {
+          setActivePlayer(prev => prev === 'A' ? 'B' : 'A');
+          setCurrentTrackRef.current(nextTrack);
+          setQueueRef.current(prevQueue => prevQueue.slice(1));
+          gaplessBufferedRef.current = false;
+          const p = idleAudio.play();
+          if (p !== undefined) p.catch(() => {});
+          return;
+        }
+      }
+      
       if (nextTrackRef.current) {
         nextTrackRef.current();
       }
@@ -182,10 +263,20 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setIsPlaying(false);
     };
 
-    audio.addEventListener('timeupdate', updateProgress);
-    audio.addEventListener('ended', handleEnded);
-    audio.addEventListener('loadedmetadata', updateProgress);
-    audio.addEventListener('error', handleError);
+    const audioA = audioRefA.current;
+    const audioB = audioRefB.current;
+    if (audioA) {
+      audioA.addEventListener('timeupdate', updateProgress);
+      audioA.addEventListener('ended', handleEnded);
+      audioA.addEventListener('loadedmetadata', updateProgress);
+      audioA.addEventListener('error', handleError);
+    }
+    if (audioB) {
+      audioB.addEventListener('timeupdate', updateProgress);
+      audioB.addEventListener('ended', handleEnded);
+      audioB.addEventListener('loadedmetadata', updateProgress);
+      audioB.addEventListener('error', handleError);
+    }
 
     if ('mediaSession' in navigator) {
       navigator.mediaSession.setActionHandler('play', () => togglePlayRef.current?.());
@@ -200,25 +291,26 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
 
     return () => {
-      audio.removeEventListener('timeupdate', updateProgress);
-      audio.removeEventListener('ended', handleEnded);
-      audio.removeEventListener('loadedmetadata', updateProgress);
-      audio.removeEventListener('error', handleError);
-      if (playPromiseRef.current !== undefined) {
-        playPromiseRef.current.then(() => {
-          audio.pause();
-        }).catch(() => {});
-      } else {
-        audio.pause();
+      if (audioA) {
+        audioA.removeEventListener('timeupdate', updateProgress);
+        audioA.removeEventListener('ended', handleEnded);
+        audioA.removeEventListener('loadedmetadata', updateProgress);
+        audioA.removeEventListener('error', handleError);
+      }
+      if (audioB) {
+        audioB.removeEventListener('timeupdate', updateProgress);
+        audioB.removeEventListener('ended', handleEnded);
+        audioB.removeEventListener('loadedmetadata', updateProgress);
+        audioB.removeEventListener('error', handleError);
       }
     };
-  }, []);
+  }, [activePlayer]);
 
   useEffect(() => {
-    if (audioRef.current && currentTrack) {
-      audioRef.current.src = currentTrack.audioUrl;
-      // We check if it should be playing. We don't add isPlaying to deps because 
-      // we only want to change src when currentTrack changes.
+    if (crossfadeTriggeredRef.current) return;
+    const audio = activePlayer === 'A' ? audioRefA.current : audioRefB.current;
+    if (audio && currentTrack) {
+      audio.src = currentTrack.audioUrl;
       if (isPlaying) {
         safePlay();
       }
@@ -241,7 +333,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (currentTrack) {
       localStorage.setItem('lastTrack', JSON.stringify(currentTrack));
     }
-  }, [currentTrack?.audioUrl]);
+  }, [currentTrack?.audioUrl, activePlayer]);
 
 
   const playTrack = (track: Track) => {

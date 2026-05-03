@@ -10,6 +10,8 @@ import { PlayerScreen } from './screens/PlayerScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
 import { LibraryScreen } from './screens/LibraryScreen';
 import { JamScreen } from './screens/JamScreen';
+import { SettingsScreen } from './screens/SettingsScreen';
+import { SettingsProvider } from './context/SettingsContext';
 import { GlobalBackground } from './components/GlobalBackground';
 import { FloatingDock } from './components/FloatingDock';
 import { PlayerBar } from './components/PlayerBar';
@@ -63,10 +65,11 @@ export default function App() {
 
   return (
     <JamProvider>
-      <PlayerProvider>
-        <DownloadProvider>
-          <JamSync />
-          <div className="relative min-h-screen overflow-x-hidden selection:bg-primary/30">
+      <SettingsProvider>
+        <PlayerProvider>
+          <DownloadProvider>
+            <JamSync />
+            <div className="relative min-h-screen overflow-x-hidden selection:bg-primary/30">
         <AnimatePresence>
           {showSplash && (
             <Splash onComplete={() => setShowSplash(false)} />
@@ -115,7 +118,18 @@ export default function App() {
                     exit={{ opacity: 0, x: -10 }}
                     transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
                   >
-                    <ProfileScreen userId={targetProfileId} />
+                    <ProfileScreen userId={targetProfileId} onSettingsClick={() => setCurrentView('settings')} />
+                  </motion.div>
+                )}
+                {currentView === 'settings' && (
+                  <motion.div
+                    key="settings"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -12 }}
+                    transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    <SettingsScreen onBack={() => setCurrentView('profile')} />
                   </motion.div>
                 )}
                 {currentView === 'library' && (
@@ -165,6 +179,7 @@ export default function App() {
       </div>
       </DownloadProvider>
     </PlayerProvider>
+    </SettingsProvider>
     </JamProvider>
   );
 }

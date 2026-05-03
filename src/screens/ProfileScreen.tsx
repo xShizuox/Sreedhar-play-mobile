@@ -8,7 +8,7 @@ import { Avatar } from '../components/Avatar';
 import { Track } from '../types';
 import { DEFAULT_AVATARS } from '../constants';
 
-export const ProfileScreen: React.FC<{ userId?: string | null }> = ({ userId }) => {
+export const ProfileScreen: React.FC<{ userId?: string | null; onSettingsClick?: () => void }> = ({ userId, onSettingsClick }) => {
   const { playTrack, currentTrack, toggleLike, crossfadeDuration, setCrossfadeDuration } = usePlayer();
   const { downloadedTracks, getOfflineTracks } = useDownload();
   const [activeTab, setActiveTab] = useState<'uploads' | 'playlists' | 'likes' | 'offline'>('uploads');
@@ -304,7 +304,7 @@ export const ProfileScreen: React.FC<{ userId?: string | null }> = ({ userId }) 
             </div>
           </motion.div>
           <TouchableScale 
-            onClick={() => setIsEditModalOpen(true)}
+            onClick={() => onSettingsClick ? onSettingsClick() : setIsEditModalOpen(true)}
             className="absolute bottom-0 right-0 w-10 h-10 rounded-full glass flex items-center justify-center border-2 border-white/20 shadow-lg"
           >
             <Settings size={18} />
