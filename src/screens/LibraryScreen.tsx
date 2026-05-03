@@ -217,7 +217,7 @@ export const LibraryScreen: React.FC = () => {
       });
 
       const uploadPromise = new Promise((resolve, reject) => {
-        xhr.open('POST', '/api/v1/songs/upload');
+        xhr.open('POST', 'https://sreedhar-play.onrender.com/api/v1/songs/upload');
         if (token) {
           xhr.setRequestHeader('Authorization', `Bearer ${token}`);
         }

@@ -46,12 +46,38 @@ export const DownloadProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const getOfflineTracks = async () => {
     const rawTracks = await offlineStore.getOfflineTracks();
-    return rawTracks.map(t => ({
-      ...t,
-      // Create object URLs for blobs so they can be played
-      audioUrl: URL.createObjectURL(t.audioBlob),
-      cover: URL.createObjectURL(t.coverBlob),
-    }));
+    const converted = [];
+    for (const t of rawTracks) {
+      let audioUrl = t.audioUrl;
+      let cover = t.cover;
+      
+      if (t.audioBlob) {
+        try {
+          audioUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(t.audioBlob);
+          });
+        } catch (e) {
+          console.error('Failed converting audio blob', e);
+        }
+      }
+      if (t.coverBlob) {
+        try {
+          cover = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(t.coverBlob);
+          });
+        } catch (e) {
+          console.error('Failed converting cover blob', e);
+        }
+      }
+      converted.push({ ...t, audioUrl, cover });
+    }
+    return converted;
   };
 
   return (

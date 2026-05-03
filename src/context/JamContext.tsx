@@ -31,7 +31,7 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
-    socketRef.current = io(window.location.origin);
+    socketRef.current = io('https://sreedhar-play.onrender.com');
     
     socketRef.current.on('jam-update', (state: JamState) => {
       setJamState(state);

@@ -147,12 +147,16 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
       
       if ('mediaSession' in navigator) {
+        let coverUrl = currentTrack.cover || 'https://sreedhar-play.onrender.com/static/default_cover.jpg';
+        if (coverUrl.startsWith('/')) {
+          coverUrl = 'https://sreedhar-play.onrender.com' + coverUrl;
+        }
         navigator.mediaSession.metadata = new MediaMetadata({
           title: currentTrack.title,
           artist: currentTrack.artist,
           album: 'Sreedhar Play',
           artwork: [
-            { src: currentTrack.cover || '/static/default_cover.jpg', sizes: '512x512', type: 'image/jpeg' }
+            { src: coverUrl, sizes: '512x512', type: 'image/jpeg' }
           ]
         });
       }
